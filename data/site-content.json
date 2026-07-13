@@ -1,7 +1,7 @@
 {
-  "updatedAt": "2026-07-11T13:43:49.475Z",
+  "updatedAt": "2026-07-13T09:12:20.318Z",
   "meta": {
-    "title": "Shine Kyaw Kyaw Aung | Portfolio",
+    "title": "Iqbal Chaqa Fuzta | Portfolio",
     "description": "Software engineer and creative developer portfolio."
   },
   "theme": {
@@ -13,8 +13,8 @@
     "navy": "#191F45"
   },
   "nav": {
-    "brandPrimary": "Shine",
-    "brandSecondary": "KKA",
+    "brandPrimary": "Iqbal",
+    "brandSecondary": " Chaqa Fuzta",
     "resumeLabel": "Resume",
     "resumeUrl": "#about",
     "items": [
@@ -53,10 +53,10 @@
   "hero": {
     "eyebrow": "Software Engineer & Creative Developer",
     "greeting": "Hi, I'm",
-    "name": "Shine Kyaw Kyaw Aung",
+    "name": "Iqbal Chaqa Fuzta",
     "description": "I craft exceptional digital experiences with code, creativity, and a passion for innovation.",
     "portraitImage": "/uploads/untitled-design-11-1783777428627.png",
-    "portraitAlt": "Shine Kyaw Kyaw Aung",
+    "portraitAlt": "Iqbal Chaqa Fuzta",
     "primaryCta": {
       "label": "View Projects",
       "href": "#projects"
@@ -70,7 +70,7 @@
     "title": "About Me",
     "subtitle": "My background and journey",
     "image": "/placeholder.svg?height=600&width=600",
-    "imageAlt": "Shine Kyaw Kyaw Aung",
+    "imageAlt": "Iqbal Chaqa Fuzta",
     "statusLabel": "Available for work",
     "paragraphs": [
       "I'm a passionate software engineer with experience building web applications and digital products. I specialize in frontend development with React and Next.js, but I'm also comfortable working with backend technologies.",
@@ -80,7 +80,7 @@
     "details": [
       {
         "label": "Name",
-        "value": "Shine Kyaw Kyaw Aung"
+        "value": "Iqbal Chaqa Fuzta"
       },
       {
         "label": "Email",
@@ -285,7 +285,7 @@
     }
   },
   "footer": {
-    "owner": "Shine Kyaw Kyaw Aung",
+    "owner": "Iqbal Chaqa Fuzta",
     "rightsText": "All rights reserved."
   }
 }

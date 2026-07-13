@@ -150,9 +150,9 @@ export interface SiteContent {
 }
 
 export const DEFAULT_SITE_CONTENT: SiteContent = {
-  updatedAt: "2026-07-11T00:00:00.000Z",
+  updatedAt: "2026-07-13T09:12:20.318Z",
   meta: {
-    title: "Shine Kyaw Kyaw Aung | Portfolio",
+    title: "Iqbal Chaqa Fuzta | Portfolio",
     description: "Software engineer and creative developer portfolio.",
   },
   theme: {
@@ -164,8 +164,8 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     navy: "#191F45",
   },
   nav: {
-    brandPrimary: "Shine",
-    brandSecondary: "KKA",
+    brandPrimary: "Iqbal",
+    brandSecondary: " Chaqa Fuzta",
     resumeLabel: "Resume",
     resumeUrl: "#about",
     items: [
@@ -184,10 +184,10 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   hero: {
     eyebrow: "Software Engineer & Creative Developer",
     greeting: "Hi, I'm",
-    name: "Shine Kyaw Kyaw Aung",
+    name: "Iqbal Chaqa Fuzta",
     description: "I craft exceptional digital experiences with code, creativity, and a passion for innovation.",
     portraitImage: "/profile-cutout-trimmed.png",
-    portraitAlt: "Shine Kyaw Kyaw Aung",
+    portraitAlt: "Iqbal Chaqa Fuzta",
     primaryCta: { label: "View Projects", href: "#projects" },
     secondaryCta: { label: "Contact Me", href: "#contact" },
   },
@@ -195,7 +195,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     title: "About Me",
     subtitle: "My background and journey",
     image: "/placeholder.svg?height=600&width=600",
-    imageAlt: "Shine Kyaw Kyaw Aung",
+    imageAlt: "Iqbal Chaqa Fuzta",
     statusLabel: "Available for work",
     paragraphs: [
       "I'm a passionate software engineer with experience building web applications and digital products. I specialize in frontend development with React and Next.js, but I'm also comfortable working with backend technologies.",
@@ -203,7 +203,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       "When I'm not coding, you can find me exploring new technologies, contributing to open-source projects, and staying up-to-date with the latest industry trends.",
     ],
     details: [
-      { label: "Name", value: "Shine Kyaw Kyaw Aung" },
+      { label: "Name", value: "Iqbal Chaqa Fuzta" },
       { label: "Email", value: "shinekyawkyawaung@gmail.com" },
       { label: "Location", value: "Myanmar" },
       { label: "Availability", value: "Open to opportunities" },
@@ -335,7 +335,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     },
   },
   footer: {
-    owner: "Shine Kyaw Kyaw Aung",
+    owner: "Iqbal Chaqa Fuzta",
     rightsText: "All rights reserved.",
   },
 }
