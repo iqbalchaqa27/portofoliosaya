@@ -238,7 +238,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         description: "A full-stack e-commerce platform built with Next.js, Stripe, and Prisma.",
         tags: ["Next.js", "TypeScript", "Prisma", "Stripe"],
         image: "/placeholder.svg?height=400&width=600",
-        demoUrl: "https://example.com",
+        demoUrl: "",
         repoUrl: "https://github.com",
       },
       {
@@ -246,7 +246,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         description: "A collaborative task management application with real-time updates.",
         tags: ["React", "Firebase", "Tailwind CSS", "Redux"],
         image: "/placeholder.svg?height=400&width=600",
-        demoUrl: "https://example.com",
+        demoUrl: "",
         repoUrl: "https://github.com",
       },
       {
@@ -254,7 +254,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         description: "An AI-powered content generation tool using OpenAI's GPT models.",
         tags: ["Next.js", "OpenAI API", "Node.js", "MongoDB"],
         image: "/placeholder.svg?height=400&width=600",
-        demoUrl: "https://example.com",
+        demoUrl: "",
         repoUrl: "https://github.com",
       },
       {
@@ -262,7 +262,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         description: "A mobile-first fitness tracking application with data visualization.",
         tags: ["React Native", "TypeScript", "D3.js", "Firebase"],
         image: "/placeholder.svg?height=400&width=600",
-        demoUrl: "https://example.com",
+        demoUrl: "",
         repoUrl: "https://github.com",
       },
       {
@@ -270,7 +270,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         description: "A beautiful weather dashboard with forecasts and historical data.",
         tags: ["React", "Weather API", "Chart.js", "Styled Components"],
         image: "/placeholder.svg?height=400&width=600",
-        demoUrl: "https://example.com",
+        demoUrl: "",
         repoUrl: "https://github.com",
       },
       {
@@ -278,7 +278,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
         description: "This portfolio website built with Next.js and Tailwind CSS.",
         tags: ["Next.js", "Tailwind CSS", "Framer Motion", "TypeScript"],
         image: "/placeholder.svg?height=400&width=600",
-        demoUrl: "https://example.com",
+        demoUrl: "",
         repoUrl: "https://github.com",
       },
     ],

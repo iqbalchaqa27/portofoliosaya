@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import type React from "react"
 
@@ -20,20 +20,43 @@ export function ContactForm({ content }: ContactFormProps) {
   const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    const form = event.currentTarget
+    const formData = new FormData(form)
 
-    toast({
-      title: content.toastTitle,
-      description: content.toastDescription,
-    })
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.get("name"),
+          email: formData.get("email"),
+          subject: formData.get("subject"),
+          message: formData.get("message"),
+        }),
+      })
 
-    setIsSubmitting(false)
-    e.currentTarget.reset()
+      if (!response.ok) {
+        throw new Error("Message failed")
+      }
+
+      toast({
+        title: content.toastTitle,
+        description: content.toastDescription,
+      })
+
+      form.reset()
+    } catch {
+      toast({
+        title: "Pesan gagal dikirim",
+        description: "Coba beberapa saat lagi atau hubungi saya lewat email.",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -52,6 +75,7 @@ export function ContactForm({ content }: ContactFormProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Input
+                name="name"
                 placeholder={content.namePlaceholder}
                 required
                 className="bg-kv-navy/60 border-kv-sky/25 text-kv-cream placeholder:text-kv-sand/60 focus:border-kv-sand focus:ring-kv-sand/20"
@@ -59,6 +83,7 @@ export function ContactForm({ content }: ContactFormProps) {
             </div>
             <div className="space-y-2">
               <Input
+                name="email"
                 type="email"
                 placeholder={content.emailPlaceholder}
                 required
@@ -67,6 +92,7 @@ export function ContactForm({ content }: ContactFormProps) {
             </div>
             <div className="space-y-2">
               <Input
+                name="subject"
                 placeholder={content.subjectPlaceholder}
                 required
                 className="bg-kv-navy/60 border-kv-sky/25 text-kv-cream placeholder:text-kv-sand/60 focus:border-kv-sand focus:ring-kv-sand/20"
@@ -74,6 +100,7 @@ export function ContactForm({ content }: ContactFormProps) {
             </div>
             <div className="space-y-2">
               <Textarea
+                name="message"
                 placeholder={content.messagePlaceholder}
                 rows={5}
                 required

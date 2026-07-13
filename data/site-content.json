@@ -166,7 +166,7 @@
           "Stripe"
         ],
         "image": "/placeholder.svg?height=400&width=600",
-        "demoUrl": "https://example.com",
+        "demoUrl": "",
         "repoUrl": "https://github.com"
       },
       {
@@ -179,7 +179,7 @@
           "Redux"
         ],
         "image": "/placeholder.svg?height=400&width=600",
-        "demoUrl": "https://example.com",
+        "demoUrl": "",
         "repoUrl": "https://github.com"
       },
       {
@@ -192,7 +192,7 @@
           "MongoDB"
         ],
         "image": "/placeholder.svg?height=400&width=600",
-        "demoUrl": "https://example.com",
+        "demoUrl": "",
         "repoUrl": "https://github.com"
       },
       {
@@ -205,7 +205,7 @@
           "Firebase"
         ],
         "image": "/placeholder.svg?height=400&width=600",
-        "demoUrl": "https://example.com",
+        "demoUrl": "",
         "repoUrl": "https://github.com"
       },
       {
@@ -218,7 +218,7 @@
           "Styled Components"
         ],
         "image": "/placeholder.svg?height=400&width=600",
-        "demoUrl": "https://example.com",
+        "demoUrl": "",
         "repoUrl": "https://github.com"
       },
       {
@@ -231,7 +231,7 @@
           "TypeScript"
         ],
         "image": "/placeholder.svg?height=400&width=600",
-        "demoUrl": "https://example.com",
+        "demoUrl": "",
         "repoUrl": "https://github.com"
       }
     ]

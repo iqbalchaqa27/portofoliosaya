@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -19,6 +19,8 @@ interface ProjectCardProps {
 
 export function ProjectCard({ title, description, tags, image, demoUrl, repoUrl }: ProjectCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const demoHref = getExternalHref(demoUrl)
+  const repoHref = getExternalHref(repoUrl)
 
   return (
     <motion.div
@@ -58,22 +60,28 @@ export function ProjectCard({ title, description, tags, image, demoUrl, repoUrl 
             </div>
 
             <div className="flex justify-between mt-auto pt-4 border-t border-kv-sky/20">
-              <Button variant="ghost" size="sm" className="text-kv-sand hover:text-kv-cream hover:bg-kv-blue/50" asChild>
-                <Link href={repoUrl} target="_blank" rel="noopener noreferrer">
-                  <Github className="mr-2 h-4 w-4" />
-                  Code
-                </Link>
-              </Button>
-              <Button
-                size="sm"
-                className="bg-gradient-to-r from-kv-cream to-kv-sky hover:from-kv-sand hover:to-kv-sky text-kv-navy border-0"
-                asChild
-              >
-                <Link href={demoUrl} target="_blank" rel="noopener noreferrer">
-                  Live Demo
-                  <ArrowUpRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              {repoHref ? (
+                <Button variant="ghost" size="sm" className="text-kv-sand hover:text-kv-cream hover:bg-kv-blue/50" asChild>
+                  <Link href={repoHref} target="_blank" rel="noopener noreferrer">
+                    <Github className="mr-2 h-4 w-4" />
+                    Code
+                  </Link>
+                </Button>
+              ) : (
+                <span />
+              )}
+              {demoHref && (
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-kv-cream to-kv-sky hover:from-kv-sand hover:to-kv-sky text-kv-navy border-0"
+                  asChild
+                >
+                  <Link href={demoHref} target="_blank" rel="noopener noreferrer">
+                    Live Demo
+                    <ArrowUpRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
 
@@ -86,4 +94,18 @@ export function ProjectCard({ title, description, tags, image, demoUrl, repoUrl 
       </div>
     </motion.div>
   )
+}
+
+function getExternalHref(value: string) {
+  const href = value.trim()
+
+  if (!href) {
+    return ""
+  }
+
+  if (/^(https?:|mailto:|tel:|#|\/)/i.test(href)) {
+    return href
+  }
+
+  return `https://${href}`
 }

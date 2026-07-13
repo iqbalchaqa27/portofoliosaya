@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   cloneSiteContent,
@@ -14,6 +14,7 @@ import {
 interface AdminCredentials {
   username: string
   password: string
+  accessToken?: string
 }
 
 interface SaveResult {
@@ -21,30 +22,39 @@ interface SaveResult {
   savedRemotely: boolean
 }
 
-export function useSiteContent() {
-  const [content, setContent] = useState<SiteContent>(() => cloneSiteContent())
-  const [isLoading, setIsLoading] = useState(true)
+export function useSiteContent(initialContent?: SiteContent) {
+  const initialContentRef = useRef<SiteContent | null>(initialContent ? mergeSiteContent(initialContent) : null)
+  const [content, setContent] = useState<SiteContent>(() => initialContentRef.current ?? cloneSiteContent())
+  const [isLoading, setIsLoading] = useState(!initialContentRef.current)
 
   useEffect(() => {
     let isMounted = true
+    const hydratedContent = initialContentRef.current
 
-    const localContent = readLocalContent()
-    if (localContent) {
-      setContent(localContent)
-      applySiteContent(localContent)
-    } else {
-      applySiteContent(DEFAULT_SITE_CONTENT)
+    clearLocalContentCache()
+    if (hydratedContent) {
+      applySiteContent(hydratedContent)
     }
 
-    fetch("/api/site-content", { cache: "no-store" })
+    fetch(`/api/site-content?ts=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    })
       .then((response) => (response.ok ? response.json() : null))
       .then((remoteContent) => {
-        if (!isMounted || !remoteContent) return
+        if (!isMounted) return
 
-        const nextContent = pickNewest(localContent, mergeSiteContent(remoteContent))
+        if (!remoteContent) {
+          if (!hydratedContent) {
+            applySiteContent(DEFAULT_SITE_CONTENT)
+          }
+          return
+        }
+
+        const nextContent = mergeSiteContent(remoteContent)
         setContent(nextContent)
         applySiteContent(nextContent)
-        persistLocalContent(nextContent)
+        clearLocalContentCache()
       })
       .catch(() => {
         if (!isMounted) return
@@ -54,16 +64,12 @@ export function useSiteContent() {
       })
 
     const handleContentChange = () => {
-      const nextContent = readLocalContent()
-      if (!nextContent) return
-
-      setContent(nextContent)
-      applySiteContent(nextContent)
+      clearLocalContentCache()
     }
 
     const handleStorage = (event: StorageEvent) => {
       if (event.key === SITE_CONTENT_STORAGE_KEY) {
-        handleContentChange()
+        clearLocalContentCache()
       }
     }
 
@@ -85,13 +91,22 @@ export function useSiteContent() {
 
     setContent(stampedContent)
     applySiteContent(stampedContent)
-    persistLocalContent(stampedContent)
+    clearLocalContentCache()
     notifyContentChange()
 
     try {
-      const response = await fetch("/api/site-content", {
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+      }
+      if (credentials.accessToken) {
+        headers.Authorization = `Bearer ${credentials.accessToken}`
+      }
+
+      const response = await fetch(`/api/site-content?ts=${Date.now()}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
+        cache: "no-store",
         body: JSON.stringify({
           username: credentials.username,
           password: credentials.password,
@@ -106,7 +121,7 @@ export function useSiteContent() {
       const savedContent = mergeSiteContent(await response.json())
       setContent(savedContent)
       applySiteContent(savedContent)
-      persistLocalContent(savedContent)
+      clearLocalContentCache()
       notifyContentChange()
 
       return { content: savedContent, savedRemotely: true }
@@ -149,38 +164,20 @@ export function applySiteContent(content: SiteContent) {
   }
 }
 
-function readLocalContent(): SiteContent | null {
-  if (typeof window === "undefined") return null
-
-  try {
-    const raw = window.localStorage.getItem(SITE_CONTENT_STORAGE_KEY)
-    return raw ? mergeSiteContent(JSON.parse(raw)) : null
-  } catch {
-    return null
-  }
-}
-
-function persistLocalContent(content: SiteContent) {
+function clearLocalContentCache() {
   if (typeof window === "undefined") return
 
-  window.localStorage.setItem(SITE_CONTENT_STORAGE_KEY, JSON.stringify(content))
+  try {
+    window.localStorage.removeItem(SITE_CONTENT_STORAGE_KEY)
+  } catch {
+    // Ignore storage access errors.
+  }
 }
 
 function notifyContentChange() {
   if (typeof window === "undefined") return
 
   window.dispatchEvent(new Event(SITE_CONTENT_EVENT))
-}
-
-function pickNewest(localContent: SiteContent | null, remoteContent: SiteContent): SiteContent {
-  if (!localContent) return remoteContent
-
-  return getTime(localContent.updatedAt) > getTime(remoteContent.updatedAt) ? localContent : remoteContent
-}
-
-function getTime(value: string) {
-  const time = new Date(value).getTime()
-  return Number.isNaN(time) ? 0 : time
 }
 
 function hexToRgb(hex: string) {

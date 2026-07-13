@@ -1,12 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import { Code2, Eye, FileText, LogOut, Palette, Plus, RotateCcw, Save, Trash2, Upload } from "lucide-react"
+import { Code2, Eye, FileText, Inbox, LogOut, Palette, Plus, RefreshCw, RotateCcw, Save, Trash2, Upload } from "lucide-react"
 import { useEffect, useState, type FormEvent, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { createSupabaseClient, signInToSupabase, signOutFromSupabase } from "@/lib/supabase/client"
 import {
   ADMIN_PASSWORD,
   ADMIN_USERNAME,
@@ -31,8 +32,18 @@ type AdminSection =
   | "projects"
   | "experience"
   | "contact"
+  | "messages"
   | "footer"
   | "json"
+
+interface ContactMessage {
+  id: string
+  name: string
+  email: string
+  subject: string
+  message: string
+  created_at: string
+}
 
 const sections: Array<{ id: AdminSection; label: string }> = [
   { id: "meta", label: "Meta" },
@@ -45,14 +56,10 @@ const sections: Array<{ id: AdminSection; label: string }> = [
   { id: "projects", label: "Projects" },
   { id: "experience", label: "Experience" },
   { id: "contact", label: "Contact" },
+  { id: "messages", label: "Pesan" },
   { id: "footer", label: "Footer" },
   { id: "json", label: "JSON" },
 ]
-
-const credentials = {
-  username: ADMIN_USERNAME,
-  password: ADMIN_PASSWORD,
-}
 
 export function AdminPanel() {
   const { content, isLoading, saveContent, resetContent } = useSiteContent()
@@ -60,15 +67,39 @@ export function AdminPanel() {
   const [loginUsername, setLoginUsername] = useState("")
   const [loginPassword, setLoginPassword] = useState("")
   const [loginError, setLoginError] = useState("")
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [activeSection, setActiveSection] = useState<AdminSection>("meta")
   const [draft, setDraft] = useState<SiteContent>(() => cloneSiteContent())
   const [jsonDraft, setJsonDraft] = useState("")
   const [isDirty, setIsDirty] = useState(false)
   const [status, setStatus] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([])
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+  const [messagesError, setMessagesError] = useState("")
 
   useEffect(() => {
-    setIsAuthenticated(window.localStorage.getItem(ADMIN_SESSION_KEY) === "true")
+    const supabase = createSupabaseClient()
+
+    if (!supabase) {
+      setIsAuthenticated(window.localStorage.getItem(ADMIN_SESSION_KEY) === "true")
+      return
+    }
+
+    void supabase.auth.getSession().then(({ data }) => {
+      setIsAuthenticated(!!data.session || window.localStorage.getItem(ADMIN_SESSION_KEY) === "true")
+    })
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session)
+      if (!session) {
+        window.localStorage.removeItem(ADMIN_SESSION_KEY)
+      }
+    })
+
+    return () => {
+      authListener.subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
@@ -79,23 +110,98 @@ export function AdminPanel() {
     setJsonDraft(JSON.stringify(nextContent, null, 2))
   }, [content, isDirty, isLoading])
 
-  function handleLogin(event: FormEvent<HTMLFormElement>) {
+  useEffect(() => {
+    if (!isAuthenticated || activeSection !== "messages") return
+    void fetchContactMessages()
+  }, [activeSection, isAuthenticated])
+
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    setIsAuthenticating(true)
+    setLoginError("")
+
+    const supabase = createSupabaseClient()
+    if (supabase) {
+      const { data, error } = await signInToSupabase(loginUsername, loginPassword)
+      if (!error && data?.session) {
+        window.localStorage.setItem(ADMIN_SESSION_KEY, "true")
+        setIsAuthenticated(true)
+        setLoginPassword("")
+        setIsAuthenticating(false)
+        return
+      }
+    }
 
     if (loginUsername === ADMIN_USERNAME && loginPassword === ADMIN_PASSWORD) {
       window.localStorage.setItem(ADMIN_SESSION_KEY, "true")
       setIsAuthenticated(true)
-      setLoginError("")
       setLoginPassword("")
+      setIsAuthenticating(false)
       return
     }
 
-    setLoginError("Username atau password salah.")
+    setLoginError("Email atau password salah. Jika belum ada akun Supabase, gunakan kredensial admin default.")
+    setIsAuthenticating(false)
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    const supabase = createSupabaseClient()
+    if (supabase) {
+      await signOutFromSupabase()
+    }
+
     window.localStorage.removeItem(ADMIN_SESSION_KEY)
     setIsAuthenticated(false)
+    setLoginUsername("")
+    setLoginPassword("")
+  }
+
+  function getAdminRequestCredentials(accessToken?: string) {
+    return {
+      username: loginUsername || ADMIN_USERNAME,
+      password: loginPassword || ADMIN_PASSWORD,
+      accessToken,
+    }
+  }
+
+  function getAdminRequestHeaders(accessToken?: string): HeadersInit {
+    const credentials = getAdminRequestCredentials(accessToken)
+    const headers: HeadersInit = {
+      "x-admin-username": credentials.username,
+      "x-admin-password": credentials.password,
+    }
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`
+    }
+
+    return headers
+  }
+
+  async function fetchContactMessages() {
+    setIsLoadingMessages(true)
+    setMessagesError("")
+
+    const supabase = createSupabaseClient()
+    const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined
+
+    try {
+      const response = await fetch("/api/contact", {
+        headers: getAdminRequestHeaders(accessToken),
+        cache: "no-store",
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Gagal mengambil pesan.")
+      }
+
+      setContactMessages(result.messages ?? [])
+    } catch (error) {
+      setMessagesError(error instanceof Error ? error.message : "Gagal mengambil pesan.")
+    } finally {
+      setIsLoadingMessages(false)
+    }
   }
 
   function commitDraft(nextDraft: SiteContent) {
@@ -150,19 +256,30 @@ export function AdminPanel() {
     setIsSaving(true)
     setStatus("Menyimpan perubahan...")
 
-    const result = await saveContent(draft, credentials)
+    const supabase = createSupabaseClient()
+    const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined
+
+    const result = await saveContent(draft, getAdminRequestCredentials(accessToken))
 
     setDraft(result.content)
     setJsonDraft(JSON.stringify(result.content, null, 2))
     setIsDirty(false)
     setIsSaving(false)
-    setStatus(result.savedRemotely ? "Tersimpan ke data/site-content.json." : "Tersimpan di browser. API lokal gagal menyimpan file.")
+    setStatus(
+      result.savedRemotely
+        ? "Tersimpan ke Supabase. Website utama sudah diperbarui."
+        : "Gagal menyimpan ke server. Perubahan hanya tersimpan di browser ini."
+    )
   }
 
-  async function handleImageUpload(file: File, path: FieldPath) {
+  async function handleFileUpload(file: File, path: FieldPath | FieldPath[], successMessage = "Upload berhasil. Klik Save untuk menyimpan perubahan ke website.") {
     setIsSaving(true)
-    setStatus("Mengupload gambar...")
+    setStatus("Mengupload file...")
 
+    const supabase = createSupabaseClient()
+    const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined
+
+    const credentials = getAdminRequestCredentials(accessToken)
     const formData = new FormData()
     formData.append("username", credentials.username)
     formData.append("password", credentials.password)
@@ -172,6 +289,7 @@ export function AdminPanel() {
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
       })
       const result = await response.json()
 
@@ -180,8 +298,9 @@ export function AdminPanel() {
         return
       }
 
-      setValue(path, result.url)
-      setStatus("Upload berhasil. Klik Save untuk menyimpan perubahan ke website.")
+      const targetPaths = Array.isArray(path[0]) ? (path as FieldPath[]) : [path as FieldPath]
+      setValues(targetPaths.map((fieldPath) => ({ path: fieldPath, value: result.url })))
+      setStatus(successMessage)
     } catch {
       setStatus("Upload gagal. Coba lagi.")
     } finally {
@@ -196,13 +315,20 @@ export function AdminPanel() {
     setIsSaving(true)
     setStatus("Mereset konten...")
 
-    const result = await resetContent(credentials)
+    const supabase = createSupabaseClient()
+    const accessToken = supabase ? (await supabase.auth.getSession()).data.session?.access_token : undefined
+
+    const result = await resetContent(getAdminRequestCredentials(accessToken))
 
     setDraft(result.content)
     setJsonDraft(JSON.stringify(result.content, null, 2))
     setIsDirty(false)
     setIsSaving(false)
-    setStatus(result.savedRemotely ? "Konten berhasil direset." : "Konten direset di browser. API lokal gagal menyimpan file.")
+    setStatus(
+      result.savedRemotely
+        ? "Konten berhasil direset dan tersimpan ke Supabase."
+        : "Gagal mereset di server. Perubahan hanya tersimpan di browser ini."
+    )
   }
 
   function handleApplyJson() {
@@ -229,24 +355,24 @@ export function AdminPanel() {
 
           <div className="space-y-4">
             <Field
-              label="Username"
+              label="Email"
               value={loginUsername}
               onChange={setLoginUsername}
-              placeholder="iqbal123"
+
             />
             <Field
               label="Password"
               value={loginPassword}
               onChange={setLoginPassword}
               type="password"
-              placeholder="iqbal123"
+
             />
           </div>
 
           {loginError && <p className="mt-4 text-sm text-kv-rust">{loginError}</p>}
 
-          <Button className="mt-6 w-full bg-gradient-to-r from-kv-cream to-kv-sky text-kv-navy" type="submit">
-            Masuk
+          <Button className="mt-6 w-full bg-gradient-to-r from-kv-cream to-kv-sky text-kv-navy" type="submit" disabled={isAuthenticating}>
+            {isAuthenticating ? "Memproses..." : "Masuk"}
           </Button>
         </form>
       </main>
@@ -354,7 +480,20 @@ export function AdminPanel() {
                   onChange={(value) => setValue(["nav", "brandSecondary"], value)}
                 />
                 <Field label="Label resume" value={draft.nav.resumeLabel} onChange={(value) => setValue(["nav", "resumeLabel"], value)} />
-                <Field label="URL resume" value={draft.nav.resumeUrl} onChange={(value) => setValue(["nav", "resumeUrl"], value)} />
+                <UploadField
+                  label="Upload resume"
+                  helper="PDF, DOC, atau DOCX. Setelah upload, klik Save."
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  previewUrl={draft.nav.resumeUrl}
+                  onUpload={(file) =>
+                    handleFileUpload(
+                      file,
+                      [["nav", "resumeUrl"], ["about", "resumeUrl"]],
+                      "Resume berhasil diupload. Klik Save untuk menyimpan perubahan ke website."
+                    )
+                  }
+                  disabled={isSaving}
+                />
               </div>
 
               <ArrayHeader title="Menu navigasi" onAdd={() => addArrayItem(["nav", "items"], { name: "Menu", label: "Menu", href: "#" })} />
@@ -401,15 +540,11 @@ export function AdminPanel() {
                 <Field label="Eyebrow" value={draft.hero.eyebrow} onChange={(value) => setValue(["hero", "eyebrow"], value)} />
                 <Field label="Greeting" value={draft.hero.greeting} onChange={(value) => setValue(["hero", "greeting"], value)} />
                 <Field label="Nama besar" value={draft.hero.name} onChange={(value) => setValue(["hero", "name"], value)} />
-                <Field
-                  label="Foto hero URL"
-                  value={draft.hero.portraitImage}
-                  onChange={(value) => setValue(["hero", "portraitImage"], value)}
-                />
                 <UploadField
                   label="Upload foto hero"
                   helper="PNG, JPG, JPEG, atau WEBP. Setelah upload, klik Save."
-                  onUpload={(file) => handleImageUpload(file, ["hero", "portraitImage"])}
+                  previewUrl={draft.hero.portraitImage}
+                  onUpload={(file) => handleFileUpload(file, ["hero", "portraitImage"])}
                   disabled={isSaving}
                 />
                 <Field
@@ -451,11 +586,30 @@ export function AdminPanel() {
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Judul" value={draft.about.title} onChange={(value) => setValue(["about", "title"], value)} />
                 <Field label="Subtitle" value={draft.about.subtitle} onChange={(value) => setValue(["about", "subtitle"], value)} />
-                <Field label="Image URL" value={draft.about.image} onChange={(value) => setValue(["about", "image"], value)} />
+                <UploadField
+                  label="Upload foto about"
+                  helper="PNG, JPG, JPEG, atau WEBP. Setelah upload, klik Save."
+                  previewUrl={draft.about.image}
+                  onUpload={(file) => handleFileUpload(file, ["about", "image"])}
+                  disabled={isSaving}
+                />
                 <Field label="Image alt" value={draft.about.imageAlt} onChange={(value) => setValue(["about", "imageAlt"], value)} />
                 <Field label="Status label" value={draft.about.statusLabel} onChange={(value) => setValue(["about", "statusLabel"], value)} />
                 <Field label="Resume label" value={draft.about.resumeLabel} onChange={(value) => setValue(["about", "resumeLabel"], value)} />
-                <Field label="Resume URL" value={draft.about.resumeUrl} onChange={(value) => setValue(["about", "resumeUrl"], value)} />
+                <UploadField
+                  label="Upload resume"
+                  helper="PDF, DOC, atau DOCX. Setelah upload, klik Save."
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  previewUrl={draft.about.resumeUrl}
+                  onUpload={(file) =>
+                    handleFileUpload(
+                      file,
+                      [["about", "resumeUrl"], ["nav", "resumeUrl"]],
+                      "Resume berhasil diupload. Klik Save untuk menyimpan perubahan ke website."
+                    )
+                  }
+                  disabled={isSaving}
+                />
               </div>
 
               <ArrayHeader title="Paragraf" onAdd={() => addArrayItem(["about", "paragraphs"], "Paragraf baru")} />
@@ -543,7 +697,7 @@ export function AdminPanel() {
                     description: "Project description",
                     tags: ["Next.js"],
                     image: "/placeholder.svg?height=400&width=600",
-                    demoUrl: "https://example.com",
+                    demoUrl: "",
                     repoUrl: "https://github.com",
                   })
                 }
@@ -553,8 +707,14 @@ export function AdminPanel() {
                   <ItemBox key={`${project.title}-${index}`} onRemove={() => removeArrayItem(["projects", "items"], index)}>
                     <div className="grid gap-4 md:grid-cols-2">
                       <Field label="Title" value={project.title} onChange={(value) => setValue(["projects", "items", index, "title"], value)} />
-                      <Field label="Image URL" value={project.image} onChange={(value) => setValue(["projects", "items", index, "image"], value)} />
-                      <Field label="Demo URL" value={project.demoUrl} onChange={(value) => setValue(["projects", "items", index, "demoUrl"], value)} />
+                      <UploadField
+                        label="Upload gambar project"
+                        helper="PNG, JPG, JPEG, atau WEBP. Setelah upload, klik Save."
+                        previewUrl={project.image}
+                        onUpload={(file) => handleFileUpload(file, ["projects", "items", index, "image"])}
+                        disabled={isSaving}
+                      />
+                      <Field label="Demo URL / link milik sendiri" value={project.demoUrl} onChange={(value) => setValue(["projects", "items", index, "demoUrl"], value)} placeholder="https://domain-kamu.com" />
                       <Field label="Repo URL" value={project.repoUrl} onChange={(value) => setValue(["projects", "items", index, "repoUrl"], value)} />
                       <Field
                         label="Tags, pisahkan dengan koma"
@@ -701,6 +861,51 @@ export function AdminPanel() {
             </Panel>
           )}
 
+          {activeSection === "messages" && (
+            <Panel title="Pesan Masuk" icon={<Inbox className="h-5 w-5" />}>
+              <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <p className="text-sm text-kv-sand">Data dari form contact website utama.</p>
+                <Button
+                  className="bg-kv-blue text-kv-cream hover:bg-kv-rust"
+                  onClick={fetchContactMessages}
+                  disabled={isLoadingMessages}
+                  type="button"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  {isLoadingMessages ? "Memuat..." : "Refresh"}
+                </Button>
+              </div>
+
+              {messagesError && (
+                <div className="mb-4 rounded-md border border-kv-rust/40 bg-kv-rust/15 px-4 py-3 text-sm text-kv-cream">
+                  {messagesError}
+                </div>
+              )}
+
+              {isLoadingMessages ? (
+                <p className="text-sm text-kv-sand">Memuat pesan...</p>
+              ) : contactMessages.length === 0 ? (
+                <p className="text-sm text-kv-sand">Belum ada pesan masuk.</p>
+              ) : (
+                <div className="space-y-4">
+                  {contactMessages.map((message) => (
+                    <div key={message.id} className="rounded-md border border-kv-sky/15 bg-kv-blue/20 p-4">
+                      <div className="flex flex-col gap-1 md:flex-row md:items-start md:justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-kv-cream">{message.subject}</h3>
+                          <p className="text-sm text-kv-sand">
+                            {message.name} | {message.email}
+                          </p>
+                        </div>
+                        <time className="text-xs text-kv-sky/70">{formatMessageDate(message.created_at)}</time>
+                      </div>
+                      <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-kv-cream/85">{message.message}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Panel>
+          )}
           {activeSection === "footer" && (
             <Panel title="Footer" icon={<FileText className="h-5 w-5" />}>
               <div className="grid gap-4 md:grid-cols-2">
@@ -778,6 +983,19 @@ function clampLevel(value: string) {
 
   if (Number.isNaN(level)) return 0
   return Math.max(0, Math.min(100, level))
+}
+
+function formatMessageDate(value: string) {
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)
 }
 
 function Panel({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
@@ -870,22 +1088,39 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
 function UploadField({
   label,
   helper,
+  previewUrl,
+  accept = "image/png,image/jpeg,image/webp",
   onUpload,
   disabled,
 }: {
   label: string
   helper: string
+  previewUrl?: string
+  accept?: string
   onUpload: (file: File) => void
   disabled?: boolean
 }) {
+  const showsImagePreview = previewUrl ? /\.(png|jpe?g|webp)(\?.*)?$/i.test(previewUrl) : false
+
   return (
     <label className="block space-y-2">
       <span className="text-sm font-medium text-kv-sand">{label}</span>
+      {previewUrl && (
+        <div className="overflow-hidden rounded-md border border-kv-sky/20 bg-kv-blue/20">
+          {showsImagePreview ? (
+            <img src={previewUrl} alt={`${label} preview`} className="h-32 w-full object-cover" />
+          ) : (
+            <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="block px-3 py-2 text-sm text-kv-sand underline-offset-4 hover:text-kv-cream hover:underline">
+              Lihat file saat ini
+            </a>
+          )}
+        </div>
+      )}
       <div className="flex min-h-10 items-center gap-3 rounded-md border border-kv-sky/25 bg-kv-navy/60 px-3 py-2 text-kv-cream">
         <Upload className="h-4 w-4 text-kv-sand" />
         <input
           type="file"
-          accept="image/png,image/jpeg,image/webp"
+          accept={accept}
           disabled={disabled}
           className="w-full cursor-pointer text-sm file:mr-3 file:rounded-md file:border-0 file:bg-kv-sky file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-kv-navy hover:file:bg-kv-sand disabled:cursor-not-allowed disabled:opacity-60"
           onChange={(event) => {

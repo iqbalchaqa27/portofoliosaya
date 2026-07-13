@@ -16,9 +16,10 @@ import { ScrollProgress } from "@/components/scroll-progress"
 import { SectionHeading } from "@/components/section-heading"
 import { GlassmorphicCard } from "@/components/glassmorphic-card"
 import { useSiteContent } from "@/hooks/use-site-content"
+import type { SiteContent } from "@/lib/site-content"
 
-export function PortfolioPage() {
-  const { content } = useSiteContent()
+export function PortfolioPage({ initialContent }: { initialContent?: SiteContent }) {
+  const { content } = useSiteContent(initialContent)
   const emailHref = getEmailHref(content.socials.email)
   const emailLabel = getEmailLabel(content.socials.email)
 
