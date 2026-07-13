@@ -15,7 +15,6 @@
 
 - [Next.js](https://nextjs.org/) - The React framework for production
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [v0.dev](https://v0.dev) - AI-powered UI component generator
 - [Vercel](https://vercel.com) - Deployment platform
 
 ## Getting Started
